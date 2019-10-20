@@ -22,9 +22,13 @@ import brickpi3 # import the BrickPi3 drivers
 BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class. BP will be the BrickPi3 object.
 
 def turnRight():
+	start_posi = BP.get_motor_encoder(BP.PORT_C)
 	BP.set_motor_power(BP.PORT_C, 20)
 	BP.set_motor_power(BP.PORT_B, -20)
-	time.sleep(0.98)
+	while (BP.get_motor_encoder(BP.PORT_C) - start_posi > 80):
+		print("turning")
+		print(BP.get_motor_encoder(BP.PORT_C) - start_posi)
+	stop()
 
 def stop():
 	BP.set_motor_power(BP.PORT_C, 0)
@@ -37,7 +41,7 @@ try:
     except IOError as error:
         print(error)
     
-    while True:
+    for i in range(4):
         # The following BP.get_motor_encoder function returns the encoder value (what we want to use to control motor C's power).
         try:
             power = BP.get_motor_encoder(BP.PORT_B) / 10
@@ -50,7 +54,7 @@ try:
             power = 0
         BP.set_motor_power(BP.PORT_C, 50)
         BP.set_motor_power(BP.PORT_B, 50)
-        time.sleep(1)  # delay for 0.02 seconds (20ms) to reduce the Raspberry Pi CPU load.
+        time.sleep(0.7)  # delay for 0.02 seconds (20ms) to reduce the Raspberry Pi CPU load.
         stop()
         turnRight()
         stop()
