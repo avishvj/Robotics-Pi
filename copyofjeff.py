@@ -24,15 +24,15 @@ import math
 BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class. BP will be the BrickPi3 object.
 
 def turnRight(deg):
-	radius = 6.1
-	circum = math.pi * 2 * 3.24
-	distance = radius * math.pi * (deg / 360) * 2
-	revolution = distance / circum * 360
+#	radius = 6.1
+#	circum = math.pi * 2 * 3.24
+#	distance = radius * math.pi * (deg / 360) * 2
+#	revolution = distance / circum * 360
 	start_posi_d = BP.get_motor_encoder(BP.PORT_D)
 	start_posi_a = BP.get_motor_encoder(BP.PORT_A)
 	BP.set_motor_power(BP.PORT_A, 20)
 	BP.set_motor_power(BP.PORT_D, -20)
-	while (int((abs(BP.get_motor_encoder(BP.PORT_D) - start_posi_d) + abs(BP.get_motor_encoder(BP.PORT_A) - start_posi_a)) / 2) < revolution):
+	while (int((abs(BP.get_motor_encoder(BP.PORT_D) - start_posi_d) + abs(BP.get_motor_encoder(BP.PORT_A) - start_posi_a))) < deg):
 		print("A status: ", BP.get_motor_status(BP.PORT_A), " D status: ", BP.get_motor_status(BP.PORT_D))
 
 def moveForward(cm):
