@@ -18,6 +18,8 @@ from __future__ import division       #                           ''
 
 import time     # import the time library for the sleep function
 import brickpi3 # import the BrickPi3 drivers
+import sys
+import math
 
 BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class. BP will be the BrickPi3 object.
 
@@ -27,31 +29,62 @@ BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class. BP will be 
 # BP.SENSOR_TYPE.NXT_ULTRASONIC specifies that the sensor will be an NXT ultrasonic sensor.
 BP.set_sensor_type(BP.PORT_1, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 
+stopping_distance = 30
+
 def setPower(distance):
-	distance = distance - 30
-	if (distance > 100) :
+	distance = distance - stopping_distance                 
+	if (distance > 100) :                                   # while the distance is above 
 		BP.set_motor_power(BP.PORT_A, 75)
 		BP.set_motor_power(BP.PORT_D, 75)
-	elif (distance < 15 and distance > 0):
+	elif (distance < 15 and distance > 0):                  # while robot is near object, slow it down.
 		BP.set_motor_power(BP.PORT_A, 10)
 		BP.set_motor_power(BP.PORT_D, 10)
-	else :
+	else :                                                  # stops the robot when it's at stopping distance
 		BP.set_motor_power(BP.PORT_A, distance * 0.75)
 		BP.set_motor_power(BP.PORT_D, distance * 0.75)
 
+def turnRight(deg):
+	start_posi_d = BP.get_motor_encoder(BP.PORT_D)
+	start_posi_a = BP.get_motor_encoder(BP.PORT_A)
+	BP.set_motor_power(BP.PORT_A, -20)
+	BP.set_motor_power(BP.PORT_D, 20)
+	while (int((abs(BP.get_motor_encoder(BP.PORT_D) - start_posi_d) + abs(BP.get_motor_encoder(BP.PORT_A) - start_posi_a))) < deg):
+		print("A status: ", BP.get_motor_status(BP.PORT_A), " D status: ", BP.get_motor_status(BP.PORT_D))
+
+def moveForward(cm):
+	radius = 3.24
+	circum = math.pi * 2 * radius
+	revolution = cm / circum * 360 * 0.997
+	start_posi = BP.get_motor_encoder(BP.PORT_D)
+	BP.set_motor_power(BP.PORT_A, 30)
+	BP.set_motor_power(BP.PORT_D, 30)
+	while (abs(BP.get_motor_encoder(BP.PORT_D) - start_posi) < revolution):
+		print("A status: ", BP.get_motor_status(BP.PORT_A), " D status: ", BP.get_motor_status(BP.PORT_D))
+
+def stop():
+	BP.set_motor_power(BP.PORT_A, 0)
+	BP.set_motor_power(BP.PORT_D, 0)
+	time.sleep(1)
+
 try:
-    while True:
         # read and display the sensor value
         # BP.get_sensor retrieves a sensor value.
         # BP.PORT_1 specifies that we are looking for the value of sensor port 1.
         # BP.get_sensor returns the sensor value (what we want to display).
-        try:
-            value = BP.get_sensor(BP.PORT_1)
-            setPower(value)
-            print(value)                         # print the distance in CM
-        except brickpi3.SensorError as error:
-            print(error)
-        time.sleep(0.02)  # delay for 0.02 seconds (20ms) to reduce the Raspberry Pi CPU load.
+        for i in range(4):
+            #value = BP.get_sensor(BP.PORT_1)
+            #setPower(value)
+
+           for i in range(4):
+              moveForward(int(sys.argv[2]) / 4)
+              stop()
+            #moveForward(37)
+            #stop()
+           turnRight(int(sys.argv[1]))
+           stop()
 
 except KeyboardInterrupt: # except the program gets interrupted by Ctrl+C on the keyboard.
     BP.reset_all()        # Unconfigure the sensors, disable the motors, and restore the LED to the control of the BrickPi3 firmware.
+
+
+
