@@ -32,7 +32,9 @@ BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class. BP will be 
 BP.set_sensor_type(BP.PORT_1, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 
 stopping_distance = 30
-particles = np.zeros((100, 3))
+
+NUMBER_OF_PARTICLES = 10
+particles = np.zeros((NUMBER_OF_PARTICLES, 3))
 
 def setPower(distance):
 	distance = distance - stopping_distance                 
@@ -46,22 +48,32 @@ def setPower(distance):
 		BP.set_motor_power(BP.PORT_A, distance * 0.75)
 		BP.set_motor_power(BP.PORT_D, distance * 0.75)
 
+def printParticles():
+	global particles
+	particlesTuples = ""
+	for i in range(len(particles)):
+		particlesTuples += str(tuple(particles[i]))
+	print("drawParticles:" + particlesTuples)
 
 def calculateStraightLine(cm):
 	global particles
 	constant = 10
 	for i in range(len(particles)):
-		e = random.gauss(0, 0.1)
-		f = random.gauss(0, 0.1)
-		particles = (particles[0] + (cm + e) * math.cos(particles[2]) * constant, particles[1] + (cm + e) * math.sin(particles[2]) * constant, particles[2] + f)
-		print("drawParticles:" + str(particles))
+		e = random.gauss(0, 0.001)
+		f = random.gauss(0, 0.001)
+		particles[i] = (particles[i][0] + (cm + e) * math.cos(particles[i][2]) * constant, particles[i][1] + (cm + e) * math.sin(particles[i][2]) * constant, particles[i][2] + f)
+		tuple = (particles[i][0], particles[i][1], particles[i][2])
+		#print("drawParticles:" + str(tuple) + str((1,1,0)))
+	printParticles()
 
 def calculateRotation():
 	global particles
 	for i in range(len(particles)):
-		g = random.gauss(0, 0.1)
-		particles = (particles[0], particles[1], particles[2] + (math.pi / 2) + g)
-		print("drawParticles:" + str(particles))
+		#print("rotate: " + i)
+		g = random.gauss(0, 0.01)
+		particles[i] = (particles[i][0], particles[i][1], particles[i][2] + (math.pi / 2) + g)
+		tuple = (particles[i][0], particles[i][1], particles[i][2])
+	printParticles()
 
 def turn(deg):
 	start_posi_d = BP.get_motor_encoder(BP.PORT_D)
@@ -95,7 +107,7 @@ try:
         # BP.get_sensor retrieves a sensor value.
         # BP.PORT_1 specifies that we are looking for the value of sensor port 1.
         # BP.get_sensor returns the sensor value (what we want to display).
-        print("drawParticles:" + str(particles))
+        print("drawParticles:" + str(particles[0]))
         for i in range(4):
             #value = BP.get_sensor(BP.PORT_1)
             #setPower(value)
