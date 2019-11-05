@@ -61,8 +61,8 @@ def printLine():
 	scaledDistance = DISTANCE * SCALING_FACTOR
 	line1 = (x, y, x + scaledDistance, y)
 	line2 = (x + scaledDistance, y, x + scaledDistance, y + scaledDistance)
-	line3 = (x + scaledDistance, y + scaledDistance, x + scaledDistance, y + scaledDistance)
-	line4 = (x + scaledDistance, y + scaledDistance, x, y)
+	line3 = (x + scaledDistance, y + scaledDistance, x, y + scaledDistance)
+	line4 = (x, y + scaledDistance, x, y)
 	print("drawLine:" + str(line1))
 	print("drawLine:" + str(line2))
 	print("drawLine:" + str(line3))
@@ -99,7 +99,7 @@ def calculateRotation():
 		y = particles[i][1]
 		theta = particles[i][2]
 
-		particles[i] = (x, y, z + (math.pi / 2) + g)
+		particles[i] = (x, y, theta + (math.pi / 2) + g)
 		tuple = (particles[i][0], particles[i][1], particles[i][2])
 	printParticles()
 
