@@ -33,8 +33,14 @@ BP.set_sensor_type(BP.PORT_1, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 
 stopping_distance = 30
 
+DISTANCE = 40
+E_ERROR = 0.01
+F_ERROR = 0.002
+G_ERROR = 0.01
 NUMBER_OF_PARTICLES = 10
-particles = np.zeros((NUMBER_OF_PARTICLES, 3))
+SCALING_FACTOR = 10
+particles = np.full((NUMBER_OF_PARTICLES, 3), (100, 100, 0), dtype=float)
+
 
 def setPower(distance):
 	distance = distance - stopping_distance                 
@@ -48,6 +54,21 @@ def setPower(distance):
 		BP.set_motor_power(BP.PORT_A, distance * 0.75)
 		BP.set_motor_power(BP.PORT_D, distance * 0.75)
 
+def printLine():
+	global particles, SCALING_FACTOR, DISTANCE
+	x = particles[0][0]
+	y = particles[0][1]
+	scaledDistance = DISTANCE * SCALING_FACTOR
+	line1 = (x, y, x + scaledDistance, y)
+	line2 = (x + scaledDistance, y, x + scaledDistance, y + scaledDistance)
+	line3 = (x + scaledDistance, y + scaledDistance, x + scaledDistance, y + scaledDistance)
+	line4 = (x + scaledDistance, y + scaledDistance, x, y)
+	print("drawLine:" + str(line1))
+	print("drawLine:" + str(line2))
+	print("drawLine:" + str(line3))
+	print("drawLine:" + str(line4))
+	
+
 def printParticles():
 	global particles
 	particlesTuples = ""
@@ -55,23 +76,30 @@ def printParticles():
 		particlesTuples += str(tuple(particles[i]))
 	print("drawParticles:" + particlesTuples)
 
-def calculateStraightLine(cm):
-	global particles
-	constant = 10
+def calculateStraightLine(D):
+	global particles, E_ERROR, F_ERROR, SCALING_FACTOR
 	for i in range(len(particles)):
-		e = random.gauss(0, 0.001)
-		f = random.gauss(0, 0.001)
-		particles[i] = (particles[i][0] + (cm + e) * math.cos(particles[i][2]) * constant, particles[i][1] + (cm + e) * math.sin(particles[i][2]) * constant, particles[i][2] + f)
+		e = random.gauss(0, E_ERROR)
+		f = random.gauss(0, F_ERROR)
+
+		x = particles[i][0]
+		y = particles[i][1]
+		theta = particles[i][2]
+
+		particles[i] = (x + (D + e) * math.cos(theta) * SCALING_FACTOR, y + (D + e) * math.sin(theta) * SCALING_FACTOR, theta + f)
 		tuple = (particles[i][0], particles[i][1], particles[i][2])
-		#print("drawParticles:" + str(tuple) + str((1,1,0)))
 	printParticles()
 
 def calculateRotation():
-	global particles
+	global particles, G_ERROR
 	for i in range(len(particles)):
-		#print("rotate: " + i)
-		g = random.gauss(0, 0.01)
-		particles[i] = (particles[i][0], particles[i][1], particles[i][2] + (math.pi / 2) + g)
+		g = random.gauss(0, G_ERROR)
+
+		x = particles[i][0]
+		y = particles[i][1]
+		theta = particles[i][2]
+
+		particles[i] = (x, y, z + (math.pi / 2) + g)
 		tuple = (particles[i][0], particles[i][1], particles[i][2])
 	printParticles()
 
@@ -107,13 +135,15 @@ try:
         # BP.get_sensor retrieves a sensor value.
         # BP.PORT_1 specifies that we are looking for the value of sensor port 1.
         # BP.get_sensor returns the sensor value (what we want to display).
-        print("drawParticles:" + str(particles[0]))
+        printParticles()
+        printLine()
+        step = DISTANCE / 4
         for i in range(4):
             #value = BP.get_sensor(BP.PORT_1)
             #setPower(value)
 
            for i in range(4):
-              moveForward(10)
+              moveForward(step)
               stop()
             #moveForward(37)
             #stop()
