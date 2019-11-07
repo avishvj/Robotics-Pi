@@ -125,7 +125,7 @@ def turn(xCoord, yCoord, newXCoord, newYCoord):
 		newAngle = math.pi + newAngle
 	elif (xCoord <= newXCoord and yCoord > newYCoord):
 		newAngle = 2 * math.pi + newAngle
-#	print("Angle to turn: " , newAngle)
+	print("Angle to turn: " , newAngle)
 	turnClockwise(newAngle - currentAngle)
 	calculateRotation(newAngle - currentAngle)
 
@@ -157,6 +157,9 @@ def getAngle():
 
 
 def turnClockwise(rad):
+	print("Angle to turn: ", rad)
+	if (rad < 0):
+		rad += 2 * math.pi
 	rotations = rad * 300 / (math.pi / 2)
 	start_posi_d = BP.get_motor_encoder(BP.PORT_D)
 	start_posi_a = BP.get_motor_encoder(BP.PORT_A)
@@ -221,7 +224,7 @@ try:
              distance = math.sqrt((newXCoord - xCoord) ** 2 + (newYCoord - yCoord) ** 2) / 10
              turn(xCoord, yCoord, newXCoord, newYCoord)
              moveForward(distance)
-#             print ("xCoord after moving: ", getXCoord(), "yCoord: ", getYCoord(), "\n")
+             print ("xCoord after moving: ", getXCoord(), "yCoord: ", getYCoord(), "\n")
 
 
 except KeyboardInterrupt: # except the program gets interrupted by Ctrl+C on the keyboard.
