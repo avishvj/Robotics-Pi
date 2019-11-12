@@ -16,20 +16,18 @@ DISTANCE = 40
 E_ERROR = 0.01
 F_ERROR = 0.002
 G_ERROR = 0.01
-NUMBER_OF_PARTICLES = 100
 SCALING_FACTOR = 10
 VARIANCE = 6
-particles = np.full((NUMBER_OF_PARTICLES, 4), (100, 100, 0, 1 / NUMBER_OF_PARTICLES), dtype=float)
 
 # x, y and theta are the robots position
 # baseX and baseY is the new coord system
 def getIntersection(x, y, theta, baseX, baseY, endX, endY):
-	let c = (baseY - y) - (baseX - x) * Math.tan(theta)
+	c = (baseY - y) - (baseX - x) * math.tan(theta)
 	if (baseX == endX) :
-		return (c > 0 && c < endY - baseY)
+		return (c > 0 and c < endY - baseY)
 	else : 
 		hit = -c / math.tan(theta)
-		return (hit > 0 && hit < endX - endY)
+		return (hit > 0 and hit < endX - endY)
 
 def getGroundTruthValue(x, y, theta, Ax, Ay, Bx, By):
 	top = ((By - Ay) * (Ax - x)) - ((Bx - Ax) * (Ay - y))
@@ -46,15 +44,16 @@ def getClosestWallToParticle(x, y, theta):
 				closestWall = distance
 	return closestWall
 
-def calculateLikelihoodForAllParticles(particles):
+def calculateLikelihoodForAllParticles(particles, z):
 	# calculate sonar here as z and pass into calculateLikelihood
 	for p in particles:
 		calculateLikelihood(p[0], p[1], p[2], z)
 
 def calculateLikelihood(x, y, theta, z):
-	m = closestWallToParticle(x, y, theta)
+	global VARIANCE
+	m = getClosestWallToParticle(x, y, theta)
 	error = z-m
-	return e**(-(error)**2 / 2* variance)
+	return math.e**(-(error)**2 / 2* VARIANCE)
 
 def setPower(distance):
     distance = distance - stopping_distance
@@ -68,8 +67,8 @@ def setPower(distance):
         BP.set_motor_power(BP.PORT_A, distance * 0.75)
         BP.set_motor_power(BP.PORT_D, distance * 0.75)
 
-def calculateStraightLine(D):
-    global particles, E_ERROR, F_ERROR, SCALING_FACTOR
+def calculateStraightLine(D, particles):
+    global E_ERROR, F_ERROR, SCALING_FACTOR
     for i in range(len(particles)):
         e = random.gauss(0, E_ERROR)
         f = random.gauss(0, F_ERROR)
@@ -82,8 +81,8 @@ def calculateStraightLine(D):
         particles[i] = (x + (D + e) * math.cos(theta) * SCALING_FACTOR, y + (D + e) * math.sin(theta) * SCALING_FACTOR, theta + f, weight)
         tuple = (particles[i][0], particles[i][1], particles[i][2])
 
-def calculateRotation(angle):
-    global particles, G_ERROR
+def calculateRotation(angle, particles):
+    global G_ERROR
     for i in range(len(particles)):
         g = random.gauss(0, G_ERROR)
 
@@ -95,7 +94,7 @@ def calculateRotation(angle):
         particles[i] = (x, y, theta + (angle) + g, weight)
         tuple = (particles[i][0], particles[i][1], particles[i][2])
 
-def turn(xCoord, yCoord, newXCoord, newYCoord):
+def turn(xCoord, yCoord, newXCoord, newYCoord, particles):
     newAngle = 0
     if (xCoord == newXCoord and yCoord < newYCoord):
         newAngle = math.pi / 2
@@ -115,7 +114,7 @@ def turn(xCoord, yCoord, newXCoord, newYCoord):
         newAngle = 2 * math.pi + newAngle
     print("Angle to turn: " , newAngle)
     turnClockwise(newAngle - currentAngle)
-    calculateRotation(newAngle - currentAngle)
+    calculateRotation(newAngle - currentAngle, particles)
 
 def getXCoord():
     global particles
@@ -155,7 +154,7 @@ def turnClockwise(rad):
         a = 0
     stop()
 
-def moveForward(cm):
+def moveForward(cm, particles):
     circum = 21
     revolution = cm / circum * 360
     start_posi_a = BP.get_motor_encoder(BP.PORT_A)
@@ -168,7 +167,7 @@ def moveForward(cm):
         elif (abs(BP.get_motor_encoder(BP.PORT_D)) % 6 == 0):
             BP.set_motor_power(BP.PORT_D, 30)
     stop()
-    calculateStraightLine(cm)
+    calculateStraightLine(cm, particles)
 
 def stop():
     BP.set_motor_power(BP.PORT_A, 0)
@@ -272,5 +271,10 @@ while True:
     particles.update();
     particles.draw();
     t += 0.05;
+
+    moveForward(20, particles.data);
+    sonarReading = BP.get_sensor(BP.PORT_1);
+    likelihood = calculateLikelihoodForAllParticles(particles.data, sonarReading);
+    print(likelihood)
     time.sleep(0.05);
 
