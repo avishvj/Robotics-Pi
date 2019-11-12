@@ -132,7 +132,7 @@ def turn(xCoord, yCoord, newXCoord, newYCoord, particles):
         newAngle = math.pi + newAngle
     elif (xCoord <= newXCoord and yCoord > newYCoord):
         newAngle = 2 * math.pi + newAngle
-    print("Angle to turn: " , newAngle)
+    #print("Angle to turn: " , newAngle)
     turnClockwise(newAngle - currentAngle)
     calculateRotation(newAngle - currentAngle, particles)
 
@@ -223,11 +223,12 @@ class Canvas:
         y1 = self.__screenY(line[1]);
         x2 = self.__screenX(line[2]);
         y2 = self.__screenY(line[3]);
-        #print ("drawLine:" + str((x1,y1,x2,y2)))
+        print ("drawLine:" + str((x1,y1,x2,y2)))
 
     def drawParticles(self,data):
+        print("particles:", data)
         display = [(self.__screenX(d[0]),self.__screenY(d[1])) + d[2:] for d in data];
-        #print ("drawParticles:" + str(display))
+        print ("drawParticles:" + str(display))
 
     def __screenX(self,x):
         return (x + self.margin)*self.scale
@@ -285,10 +286,10 @@ mymap.add_wall((210,0,0,0));        # h
 mymap.draw();
 
 particles = Particles();
-
+particles.data = [(0, 0, 0, 1/particles.n) for i in range(particles.n)];
 t = 0;
 while True:
-    particles.update();
+    #particles.update();
     particles.draw();
     t += 0.05;
     oldParticles = particles.data
