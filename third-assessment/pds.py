@@ -44,10 +44,30 @@ def getClosestWallToParticle(x, y, theta):
 				closestWall = distance
 	return closestWall
 
-def calculateLikelihoodForAllParticles(particles, z):
-	# calculate sonar here as z and pass into calculateLikelihood
+def normalise(particles):
+	sum = 0
 	for p in particles:
-		calculateLikelihood(p[0], p[1], p[2], z)
+		sum += p[3]
+	for p in particles:
+		p = (p[0], p[1], p[2], p[3] / sum)
+
+def resample(particles):
+	newParticles = []
+	for p in particles:
+		randomValue = random.gauss(0, 1)
+		sampleFrom = p
+		for pp in particles:
+			randomValue -= pp[3]
+			if (randomValue < 0):
+				sampleFrom = pp
+				continue
+			newParticles.append(pp)
+	return newParticles
+
+def calculateLikelihoodForAllParticles(particles, z):
+	for p in particles:
+		weight = calculateLikelihood(p[0], p[1], p[2], z)
+		p = (p[0], p[1], p[2], weight)
 
 def calculateLikelihood(x, y, theta, z):
 	global VARIANCE
@@ -203,11 +223,11 @@ class Canvas:
         y1 = self.__screenY(line[1]);
         x2 = self.__screenX(line[2]);
         y2 = self.__screenY(line[3]);
-        print ("drawLine:" + str((x1,y1,x2,y2)))
+        #print ("drawLine:" + str((x1,y1,x2,y2)))
 
     def drawParticles(self,data):
         display = [(self.__screenX(d[0]),self.__screenY(d[1])) + d[2:] for d in data];
-        print ("drawParticles:" + str(display))
+        #print ("drawParticles:" + str(display))
 
     def __screenX(self,x):
         return (x + self.margin)*self.scale
@@ -271,10 +291,11 @@ while True:
     particles.update();
     particles.draw();
     t += 0.05;
-
-    moveForward(20, particles.data);
+    oldParticles = particles.data
+    moveForward(20, oldParticles);
     sonarReading = BP.get_sensor(BP.PORT_1);
-    likelihood = calculateLikelihoodForAllParticles(particles.data, sonarReading);
-    print(likelihood)
+    calculateLikelihoodForAllParticles(oldParticles, sonarReading);
+    normalise(oldParticles);
+    particles.data = resample(oldParticles)
     time.sleep(0.05);
 
