@@ -13,69 +13,78 @@ BP = brickpi3.BrickPi333() # Create an instance of the BrickPi3 class. BP will b
 BP.set_sensor_type(BP.PORT_1, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 
 DISTANCE = 40
-E_ERROR = 0.01
-F_ERROR = 0.002
-G_ERROR = 0.01
+E_ERROR = 0.02
+F_ERROR = 0.004
+G_ERROR = 0.04
+#E_ERROR = 0.04
+#F_ERROR = 0.008
+#G_ERROR = 0.08
+
+ROBUSTNESS = 0
+#ROBUSTNESS = 0.2
+
+SONAR_OFFSET = 8.2
+
 SCALING_FACTOR = 1
-VARIANCE = 6
+VARIANCE = 10
 
 # x, y and theta are the robots position
 # baseX and baseY is the new coord system
 def getIntersection(x, y, theta, baseX, baseY, endX, endY):
-	c = (baseY - y) - (baseX - x) * math.tan(theta)
-	if (baseX == endX) :
-		return (c > 0 and c < endY - baseY)
-	else :
-		hit = -c / math.tan(theta)
-		return (hit > 0 and hit < endX - endY)
+    c = (baseY - y) - (baseX - x) * math.tan(theta)
+    if (baseX == endX) :
+        return (c > 0 and c < endY - baseY)
+    else :
+        hit = -c / math.tan(theta)
+        return (hit > 0 and hit < endX - endY)
 
 def getGroundTruthValue(x, y, theta, Ax, Ay, Bx, By):
-	top = ((By - Ay) * (Ax - x)) - ((Bx - Ax) * (Ay - y))
-	bot = ((By - Ay) * math.cos(theta)) - ((Bx - Ax) * math.sin(theta))
-	return top / bot
+    top = ((By - Ay) * (Ax - x)) - ((Bx - Ax) * (Ay - y))
+    bot = ((By - Ay) * math.cos(theta)) - ((Bx - Ax) * math.sin(theta))
+    return top / bot
 
 # gives you closest wall to a particle's position
 def getClosestWallToParticle(x, y, theta):
-	closestWall = 500
-	for i in mymap.walls:
-		if getIntersection(x, y, theta, i[0], i[1], i[2], i[3]):
-			distance = getGroundTruthValue(x, y, theta, i[0], i[1], i[2], i[3])
-			if distance < closestWall:
-				closestWall = distance
-	return closestWall
+    closestWall = 500
+    for i in mymap.walls:
+        if getIntersection(x, y, theta, i[0], i[1], i[2], i[3]):
+            distance = getGroundTruthValue(x, y, theta, i[0], i[1], i[2], i[3])
+            if distance < closestWall:
+                closestWall = distance
+    return closestWall
 
 def normalise(particles):
-	sum = 0
-	for p in particles:
-		sum += p[3]
-	for p in particles:
-		p = (p[0], p[1], p[2], p[3] / sum)
+    sum = 0
+    for p in particles:
+        sum += p[3]
+    for p in particles:
+        p = (p[0], p[1], p[2], p[3] / sum)
 
 def resample(particles):
-	newParticles = []
-	for p in particles:
-		randomValue = random.gauss(0, 1)
-		sampleFrom = p
-		found = False
-		for pp in particles:
-			randomValue -= pp[3]
-			if (not found and randomValue < 0):
-				sampleFrom = pp
-				found = True
-				continue
-		newParticles.append(sampleFrom)
-	return newParticles
+    newParticles = []
+    for p in particles:
+        randomValue = random.gauss(0, 1)
+        sampleFrom = p
+        found = False
+        for pp in particles:
+            randomValue -= pp[3]
+            if (not found and randomValue < 0):
+                sampleFrom = pp
+                found = True
+                continue
+        newParticles.append(sampleFrom)
+    return newParticles
 
 def calculateLikelihoodForAllParticles(particles, z):
-	for p in particles:
-		weight = calculateLikelihood(p[0], p[1], p[2], z)
-		p = (p[0], p[1], p[2], weight)
+    for p in particles:
+        weight = calculateLikelihood(p[0], p[1], p[2], z)
+        p = (p[0], p[1], p[2], weight)
 
 def calculateLikelihood(x, y, theta, z):
-	global VARIANCE
-	m = getClosestWallToParticle(x, y, theta)
-	error = z-m
-	return math.e**(-(error)**2 / 2* VARIANCE)
+    global VARIANCE
+    m = getClosestWallToParticle(x, y, theta)
+    error = z-m
+    return math.e**(-(error)**2 / 2* VARIANCE) + ROBUSTNESS
 
 def setPower(distance):
     distance = distance - stopping_distance
@@ -168,15 +177,15 @@ def turnClockwise(rad):
     start_posi_d = BP.get_motor_encoder(BP.PORT_D)
     start_posi_a = BP.get_motor_encoder(BP.PORT_A)
     if (rad < math.pi):
-        print("1")
+        #print("1")
         BP.set_motor_power(BP.PORT_A, -20)
         BP.set_motor_power(BP.PORT_D, 20)
     else:
-        print("2")
+        #print("2")
         BP.set_motor_power(BP.PORT_A, 20)
         BP.set_motor_power(BP.PORT_D, -20)
         rad = 2 * math.pi - rad
-    rotations = rad * 300 / (math.pi / 2)
+    rotations = rad * 302 / (math.pi / 2)
     while (int((abs(BP.get_motor_encoder(BP.PORT_D) - start_posi_d) + abs(BP.get_motor_encoder(BP.PORT_A) - start_posi_a))) < rotations):
         a = 0
     stop()
@@ -205,17 +214,25 @@ def goToCoord(newXCoord, newYCoord, particles):
     print("distance:", distance)
     while (distance > 20):
         moveForward(20, particles.data)
-        distance -= 20
         resample2(particles)
+        xCoord = getXCoord(particles.data)
+        yCoord = getYCoord(particles.data)
+        distance = math.sqrt((newXCoord - xCoord) ** 2 + (newYCoord - yCoord) ** 2)
         turn(xCoord, yCoord, newXCoord, newYCoord, particles.data)
 
+    xCoord = getXCoord(particles.data)
+    yCoord = getYCoord(particles.data)
+    distance = math.sqrt((newXCoord - xCoord) ** 2 + (newYCoord - yCoord) ** 2)
     moveForward(distance, particles.data)
     resample2(particles)
 
 def resample2(particles):
     particles.draw();
     oldParticles = particles.data
-    sonarReading = BP.get_sensor(BP.PORT_1) + 8.2;
+    sonarSum = 0
+    for i in range(3):
+        sonarSum += BP.get_sensor(BP.PORT_1) + SONAR_OFFSET;
+    sonarReading = sonarSum/3
     calculateLikelihoodForAllParticles(oldParticles, sonarReading);
     normalise(oldParticles);
     particles.data = resample(oldParticles)
@@ -240,8 +257,8 @@ def calcTheta():
     return random.randint(0,360);
 
 # A Canvas class for drawing a map and particles:
-# 	- it takes care of a proper scaling and coordinate transformation between
-#	  the map frame of reference (in cm) and the display (in pixels)
+#     - it takes care of a proper scaling and coordinate transformation between
+#      the map frame of reference (in cm) and the display (in pixels)
 class Canvas:
     def __init__(self,map_size=210):
         self.map_size    = map_size;    # in cm;
@@ -254,12 +271,12 @@ class Canvas:
         y1 = self.__screenY(line[1]);
         x2 = self.__screenX(line[2]);
         y2 = self.__screenY(line[3]);
-        #print ("drawLine:" + str((x1,y1,x2,y2)))
+        print ("drawLine:" + str((x1,y1,x2,y2)))
 
     def drawParticles(self,data):
         #print("particles:", data)
         display = [(self.__screenX(d[0]),self.__screenY(d[1])) + d[2:] for d in data];
-        #print ("drawParticles:" + str(display))
+        print ("drawParticles:" + str(display))
 
     def __screenX(self,x):
         return (x + self.margin)*self.scale
@@ -294,7 +311,7 @@ class Particles:
     def draw(self):
         canvas.drawParticles(self.data);
 
-canvas = Canvas();	# global canvas we are going to draw on
+canvas = Canvas();    # global canvas we are going to draw on
 
 mymap = Map();
 # Definitions of walls
