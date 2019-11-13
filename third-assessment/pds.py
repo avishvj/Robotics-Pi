@@ -122,7 +122,8 @@ def turn(xCoord, yCoord, newXCoord, newYCoord, particles):
         newAngle = 3 * math.pi / 2
     else:
         newAngle = math.atan((newYCoord - yCoord) / (newXCoord - xCoord))
-    currentAngle = getAngle()
+
+    currentAngle = getAngle(particles)
 
     if (xCoord <= newXCoord and yCoord <= newYCoord):
         newAngle = newAngle
@@ -136,24 +137,21 @@ def turn(xCoord, yCoord, newXCoord, newYCoord, particles):
     turnClockwise(newAngle - currentAngle)
     calculateRotation(newAngle - currentAngle, particles)
 
-def getXCoord():
-    global particles
+def getXCoord(particles):
     sum = 0
     for i in range (len(particles)):
         sum += particles[i][0]
     avg = sum / len(particles)
     return avg
 
-def getYCoord():
-    global particles
+def getYCoord(particles):
     sum = 0
     for i in range (len(particles)):
         sum += particles[i][1]
     avg = sum / len(particles)
     return avg
 
-def getAngle():
-    global particles
+def getAngle(particles):
     sum = 0
     for i in range (len(particles)):
         sum += particles[i][2]
@@ -188,6 +186,28 @@ def moveForward(cm, particles):
             BP.set_motor_power(BP.PORT_D, 30)
     stop()
     calculateStraightLine(cm, particles)
+
+def goToCoord(newXCoord, newYCoord, particles):
+    xCoord = getXCoord(particles.data)
+    yCoord = getYCoord(particles.data)
+    distance = math.sqrt((newXCoord - xCoord) ** 2 + (newYCoord - yCoord))
+    turn(xCoord, yCoord, newXCoord, newYCoord, particles.data)
+    if distance > 20:
+        moveForward(20, particles.data)
+    else:
+        moveForward(distance, particles)
+
+    particles.draw();
+#    t += 0.05;
+    oldParticles = particles.data
+    sonarReading = BP.get_sensor(BP.PORT_1);
+    calculateLikelihoodForAllParticles(oldParticles, sonarReading);
+    normalise(oldParticles);
+    particles.data = resample(oldParticles)
+    time.sleep(0.05);
+
+    if distance > 20:
+        goToCoord(newXCoord, newYCoord, particles)
 
 def stop():
     BP.set_motor_power(BP.PORT_A, 0)
@@ -288,15 +308,20 @@ mymap.draw();
 particles = Particles();
 particles.data = [(0, 0, 0, 1/particles.n) for i in range(particles.n)];
 t = 0;
-while True:
+xCoords = [84, 180, 180, 138, 138, 114, 114, 84, 84]
+yCoords = [30, 30, 54, 54, 168, 168, 84, 84, 30]
+
+try:
+    particles.draw()
+    for i in range(len(xCoords)):
+       goToCoord(xCoords[i], yCoords[i], particles)
+
+except KeyboardInterrupt:
+    BP.reset_all()
+
+
+
+
+
     #particles.update();
-    particles.draw();
-    t += 0.05;
-    oldParticles = particles.data
-    moveForward(20, oldParticles);
-    sonarReading = BP.get_sensor(BP.PORT_1);
-    calculateLikelihoodForAllParticles(oldParticles, sonarReading);
-    normalise(oldParticles);
-    particles.data = resample(oldParticles)
-    time.sleep(0.05);
 
