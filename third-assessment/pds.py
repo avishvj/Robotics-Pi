@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#!/usr/bin/env python
 
 # Some suitable functions and data structures for drawing a map and particles
 
@@ -16,7 +16,7 @@ DISTANCE = 40
 E_ERROR = 0.01
 F_ERROR = 0.002
 G_ERROR = 0.01
-SCALING_FACTOR = 10
+SCALING_FACTOR = 1
 VARIANCE = 6
 
 # x, y and theta are the robots position
@@ -25,7 +25,7 @@ def getIntersection(x, y, theta, baseX, baseY, endX, endY):
 	c = (baseY - y) - (baseX - x) * math.tan(theta)
 	if (baseX == endX) :
 		return (c > 0 and c < endY - baseY)
-	else : 
+	else :
 		hit = -c / math.tan(theta)
 		return (hit > 0 and hit < endX - endY)
 
@@ -56,12 +56,14 @@ def resample(particles):
 	for p in particles:
 		randomValue = random.gauss(0, 1)
 		sampleFrom = p
+		found = False
 		for pp in particles:
 			randomValue -= pp[3]
-			if (randomValue < 0):
+			if (not found and randomValue < 0):
 				sampleFrom = pp
+				found = True
 				continue
-			newParticles.append(pp)
+		newParticles.append(sampleFrom)
 	return newParticles
 
 def calculateLikelihoodForAllParticles(particles, z):
@@ -163,11 +165,18 @@ def turnClockwise(rad):
     print("Angle to turn: ", rad)
     if (rad < 0):
         rad += 2 * math.pi
-    rotations = rad * 300 / (math.pi / 2)
     start_posi_d = BP.get_motor_encoder(BP.PORT_D)
     start_posi_a = BP.get_motor_encoder(BP.PORT_A)
-    BP.set_motor_power(BP.PORT_A, 20)
-    BP.set_motor_power(BP.PORT_D, -20)
+    if (rad < math.pi):
+        print("1")
+        BP.set_motor_power(BP.PORT_A, -20)
+        BP.set_motor_power(BP.PORT_D, 20)
+    else:
+        print("2")
+        BP.set_motor_power(BP.PORT_A, 20)
+        BP.set_motor_power(BP.PORT_D, -20)
+        rad = 2 * math.pi - rad
+    rotations = rad * 300 / (math.pi / 2)
     while (int((abs(BP.get_motor_encoder(BP.PORT_D) - start_posi_d) + abs(BP.get_motor_encoder(BP.PORT_A) - start_posi_a))) < rotations):
         a = 0
     stop()
@@ -180,34 +189,36 @@ def moveForward(cm, particles):
     BP.set_motor_power(BP.PORT_A, 30)
     BP.set_motor_power(BP.PORT_D, 30)
     while ((abs(BP.get_motor_encoder(BP.PORT_D) - start_posi_d) + abs(BP.get_motor_encoder(BP.PORT_A) - start_posi_a)) / 2 < revolution):
-        if (abs(BP.get_motor_encoder(BP.PORT_D)) % 6 == 0 and abs(BP.get_motor_encoder(BP.PORT_D)) % 9 == 0):
-            BP.set_motor_power(BP.PORT_D, 29)
-        elif (abs(BP.get_motor_encoder(BP.PORT_D)) % 6 == 0):
+        if (abs(BP.get_motor_encoder(BP.PORT_D)) % 8 == 0):
+            BP.set_motor_power(BP.PORT_D, 28)
+        elif (abs(BP.get_motor_encoder(BP.PORT_D)) % 4 == 0):
             BP.set_motor_power(BP.PORT_D, 30)
     stop()
     calculateStraightLine(cm, particles)
 
 def goToCoord(newXCoord, newYCoord, particles):
-    xCoord = getXCoord(particles.data)
-    yCoord = getYCoord(particles.data)
-    distance = math.sqrt((newXCoord - xCoord) ** 2 + (newYCoord - yCoord))
+    xCoord = (getXCoord(particles.data))
+    yCoord = (getYCoord(particles.data))
+    print(xCoord, "->", newXCoord, ", ", yCoord, "->", newYCoord)
+    distance = math.sqrt((newXCoord - xCoord) ** 2 + (newYCoord - yCoord) ** 2)
     turn(xCoord, yCoord, newXCoord, newYCoord, particles.data)
-    if distance > 20:
+    print("distance:", distance)
+    while (distance > 20):
         moveForward(20, particles.data)
-    else:
-        moveForward(distance, particles)
+        distance -= 20
+        resample2(particles)
+        turn(xCoord, yCoord, newXCoord, newYCoord, particles.data)
 
+    moveForward(distance, particles.data)
+    resample2(particles)
+
+def resample2(particles):
     particles.draw();
-#    t += 0.05;
     oldParticles = particles.data
-    sonarReading = BP.get_sensor(BP.PORT_1);
+    sonarReading = BP.get_sensor(BP.PORT_1) + 8.2;
     calculateLikelihoodForAllParticles(oldParticles, sonarReading);
     normalise(oldParticles);
     particles.data = resample(oldParticles)
-    time.sleep(0.05);
-
-    if distance > 20:
-        goToCoord(newXCoord, newYCoord, particles)
 
 def stop():
     BP.set_motor_power(BP.PORT_A, 0)
@@ -243,12 +254,12 @@ class Canvas:
         y1 = self.__screenY(line[1]);
         x2 = self.__screenX(line[2]);
         y2 = self.__screenY(line[3]);
-        print ("drawLine:" + str((x1,y1,x2,y2)))
+        #print ("drawLine:" + str((x1,y1,x2,y2)))
 
     def drawParticles(self,data):
-        print("particles:", data)
+        #print("particles:", data)
         display = [(self.__screenX(d[0]),self.__screenY(d[1])) + d[2:] for d in data];
-        print ("drawParticles:" + str(display))
+        #print ("drawParticles:" + str(display))
 
     def __screenX(self,x):
         return (x + self.margin)*self.scale
@@ -306,14 +317,15 @@ mymap.add_wall((210,0,0,0));        # h
 mymap.draw();
 
 particles = Particles();
-particles.data = [(0, 0, 0, 1/particles.n) for i in range(particles.n)];
+particles.data = [(84, 30, 0, 1/particles.n) for i in range(particles.n)];
 t = 0;
-xCoords = [84, 180, 180, 138, 138, 114, 114, 84, 84]
-yCoords = [30, 30, 54, 54, 168, 168, 84, 84, 30]
+xCoords = [180, 180, 138, 138, 114, 114, 84, 84]
+yCoords = [30, 54, 54, 168, 168, 84, 84, 30]
 
 try:
     particles.draw()
     for i in range(len(xCoords)):
+       print("x:", xCoords[i], "y:", yCoords[i])
        goToCoord(xCoords[i], yCoords[i], particles)
 
 except KeyboardInterrupt:
